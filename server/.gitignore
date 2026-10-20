@@ -1,0 +1,30 @@
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Go 构建产物
+bin/
+dist/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+coverage.out
+coverage.html
+
+# 日志
+logs/
+
+# 运行时数据
+storage/*
+!storage/.gitkeep
+
+# 本地配置与密钥
+configs/config.yaml
+.env
+.env.local

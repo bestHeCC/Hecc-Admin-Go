@@ -9,11 +9,13 @@ Thumbs.db
 # Go
 server/bin/
 server/dist/
+server/logs/
 server/storage/*
 !server/storage/.gitkeep
 *.exe
 *.test
 *.out
+coverage.out
 
 # 本地配置与密钥
 server/configs/config.yaml
@@ -25,3 +27,6 @@ web/.env.local
 web/node_modules/
 web/dist/
 web/.vite/
+web/coverage/
+web/*.tsbuildinfo
+web/tsconfig.*.tsbuildinfo
