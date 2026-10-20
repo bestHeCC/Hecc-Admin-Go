@@ -1,5 +1,7 @@
 # IDE / OS
 .idea/
+server/.idea
+web/.idea
 .vscode/
 .DS_Store
 Thumbs.db
