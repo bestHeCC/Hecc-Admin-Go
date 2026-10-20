@@ -1,0 +1,95 @@
+# Hecc-Admin-Go 后端配置示例
+#
+# 使用方式：
+#   cp configs/config.example.yaml configs/config.yaml
+# 然后按本地环境修改。config.yaml 已被 gitignore。
+#
+# 所有配置项只从 YAML 文件读取，不支持环境变量覆盖。
+
+app:
+  name: hecc-admin
+  version: "0.1.0"
+  # 多实例部署时用于 Kafka 消费组（admin-sse-{instance_id}）。
+  # 留空 = {hostname}-{port}，同机多进程也能保证唯一。
+  instance_id: ""
+
+server:
+  env: dev                  # dev / test / product
+  port: "8080"
+  read_timeout: 30          # 秒
+  write_timeout: 30         # 秒；-1 表示不设写超时（SSE 会自动清除写 deadline）
+  idle_timeout: 60          # 秒
+  body_size_limit: 10485760 # 10MB
+
+log:
+  root_dir: logs
+  show_line: true
+  max_backups: 7
+  max_size: 100             # MB
+  max_age: 30               # 天
+  compress: true
+
+db:
+  default: postgres
+  postgres:
+    ip: 127.0.0.1
+    port: 5432
+    username: postgres
+    password: postgres
+    db_name: hecc-admin
+    connect_timeout: 5
+    max_idle_conn: 10
+    max_open_conn: 50
+    conn_max_lifetime: 3600 # 秒
+    slow_threshold: 200     # 毫秒，超过则记录慢 SQL
+
+cache:
+  local:
+    clear_interval: 300 # 本地缓存清理间隔，秒
+  redis:
+    addr: 127.0.0.1:6379
+    password: ""
+    pool_size: 50
+    db: 0
+
+trace:
+  service_name: hecc-admin-go
+  endpoint: 127.0.0.1:4318 # OTLP HTTP；无采集器时保持 sampler.type=never
+  sampler:
+    type: never            # always / never / probability
+    ratio: 0.1
+
+mq:
+  driver: kafka
+  kafka:
+    brokers:
+      - 127.0.0.1:9092
+    # 新消费组首次订阅的位置；已有提交 offset 的组以提交位置为准。
+    start_offset: last
+  consumer:
+    concurrency: 1
+
+# 阶段 3 使用：服务端会话（Redis）
+session:
+  idle_timeout: 7200      # 滑动空闲过期，秒（2h）
+  absolute_timeout: 43200 # 绝对过期，秒（12h）
+  max_per_user: 0         # 0 = 不限制
+  token_bytes: 32
+
+# 阶段 5 使用：文件上传
+upload:
+  driver: local
+  dir: storage/uploads
+  max_size: 10485760
+  allowed_extensions:
+    - .jpg
+    - .jpeg
+    - .png
+    - .gif
+    - .webp
+    - .pdf
+    - .doc
+    - .docx
+    - .xls
+    - .xlsx
+    - .zip
