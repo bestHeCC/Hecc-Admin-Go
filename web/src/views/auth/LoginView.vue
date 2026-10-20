@@ -100,6 +100,8 @@ async function handleLogin(): Promise<void> {
 
         <el-form
           ref="formRef"
+          name="login"
+          autocomplete="on"
           :model="form"
           :rules="rules"
           size="large"
@@ -109,6 +111,7 @@ async function handleLogin(): Promise<void> {
           <el-form-item prop="username">
             <el-input
               v-model="form.username"
+              name="username"
               :prefix-icon="User"
               placeholder="用户名"
               autocomplete="username"
@@ -119,12 +122,12 @@ async function handleLogin(): Promise<void> {
           <el-form-item prop="password">
             <el-input
               v-model="form.password"
+              name="password"
               :prefix-icon="Lock"
               type="password"
               placeholder="密码"
               autocomplete="current-password"
               show-password
-              @keyup.enter="handleLogin"
             />
           </el-form-item>
 
@@ -147,33 +150,51 @@ async function handleLogin(): Promise<void> {
 
 <style scoped>
 .login-page {
-  display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(420px, 0.9fr);
+  position: relative;
+  display: flex;
+  justify-content: center;
   min-height: 100%;
-  background: #f5f7fa;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 18% 18%, rgb(255 255 255 / 14%), transparent 40%),
+    radial-gradient(circle at 85% 85%, rgb(64 158 255 / 42%), transparent 48%),
+    linear-gradient(135deg, #17202e 0%, #1d4f91 52%, #2f7fe0 100%);
+}
+
+.login-page::before,
+.login-page::after {
+  position: absolute;
+  content: '';
+  border: 1px solid rgb(255 255 255 / 14%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.login-page::before {
+  top: -180px;
+  left: -140px;
+  width: 480px;
+  height: 480px;
+}
+
+.login-page::after {
+  right: -160px;
+  bottom: -200px;
+  width: 560px;
+  height: 560px;
 }
 
 .login-brand {
   position: relative;
+  z-index: 1;
   display: flex;
+  flex: 1 1 50%;
   align-items: center;
+  justify-content: center;
+  min-width: 0;
+  max-width: 700px;
   padding: 64px;
-  overflow: hidden;
   color: #fff;
-  background:
-    radial-gradient(circle at 20% 20%, rgb(255 255 255 / 16%), transparent 36%),
-    linear-gradient(135deg, #1f2d3d 0%, #1d4f91 55%, #409eff 100%);
-}
-
-.login-brand::after {
-  position: absolute;
-  right: -120px;
-  bottom: -180px;
-  width: 460px;
-  height: 460px;
-  content: '';
-  border: 1px solid rgb(255 255 255 / 18%);
-  border-radius: 50%;
 }
 
 .brand-content {
@@ -234,19 +255,26 @@ async function handleLogin(): Promise<void> {
 }
 
 .login-panel {
+  position: relative;
+  z-index: 1;
   display: flex;
+  flex: 1 1 50%;
   align-items: center;
   justify-content: center;
-  padding: 32px;
+  width: auto;
+  max-width: 620px;
+  padding: 32px 48px;
 }
 
 .login-card {
   width: 100%;
   max-width: 420px;
   padding: 12px 16px;
+  background: rgb(255 255 255 / 96%);
+  backdrop-filter: blur(12px);
   border: none;
   border-radius: 16px;
-  box-shadow: 0 18px 48px rgb(31 45 61 / 10%);
+  box-shadow: 0 24px 64px rgb(12 30 56 / 28%);
 }
 
 .login-heading {
@@ -285,15 +313,14 @@ async function handleLogin(): Promise<void> {
 }
 
 @media (width <= 900px) {
-  .login-page {
-    grid-template-columns: 1fr;
-  }
-
   .login-brand {
     display: none;
   }
 
   .login-panel {
+    flex: 1 1 auto;
+    width: auto;
+    max-width: none;
     min-height: 100vh;
     padding: 20px;
   }
