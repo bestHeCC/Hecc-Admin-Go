@@ -1,9 +1,16 @@
 # web — Vue 3 前端
 
-> **当前状态**：前端骨架已完成并可构建运行 —— 登录、强制改密、主布局、动态路由、按钮权限、请求封装、SSE 客户端均已就绪。
-> 业务页面（用户/角色/菜单等）待按根目录 [PLAN.md](../PLAN.md) 阶段 7 实现。
->
-> 已通过：`npm run build`、`npm run test`、`npm run lint`。
+Hecc-Admin-Go 的 Web 前端，基于 Vue 3 + TypeScript + Vite + Element Plus。
+
+当前包含：
+
+- 登录、强制首次改密、403/404 页面与主布局（侧边栏、导航栏、面包屑、通知铃铛）
+- 基于后端菜单树的动态路由与路由守卫
+- 按钮级权限指令 `v-hasPerm` 与 `usePermission`
+- axios 请求封装：Bearer 注入、统一响应解包、会话失效处理
+- SSE 通知客户端：携带 Bearer、断线自动重连、被踢下线处理
+
+> 登录、用户信息、菜单等接口由后端 `/admin/auth/*` 提供；后端认证接口实现后即可联调。
 
 ## 技术栈
 
@@ -58,10 +65,11 @@ web/
         └── error/               # NotFoundView.vue
 ```
 
-> 与早期规划的差异：ESLint 使用 9.x flat config（`eslint.config.js`）替代 `.eslintrc.cjs`；
-> TypeScript 配置使用 `.json` 后缀（`tsconfig.app.json`）以符合 Vue 官方模板约定。
+`auto-imports.d.ts` 与 `components.d.ts` 由插件生成并提交仓库，不要手工修改。
 
 ## 本地运行
+
+前置：Node 22.12+（见 `package.json` 的 `engines`）；后端默认运行在 `http://127.0.0.1:8080`。
 
 ```bash
 npm install
@@ -76,6 +84,7 @@ npm run dev       # http://localhost:5173
 |---|---|
 | `npm run dev` | 启动开发服务器 |
 | `npm run build` | `vue-tsc -b && vite build` |
+| `npm run preview` | 预览生产构建产物 |
 | `npm run type-check` | 仅类型检查 |
 | `npm run test` | Vitest 单次运行 |
 | `npm run lint` | ESLint |
@@ -87,10 +96,10 @@ npm run dev       # http://localhost:5173
 |---|---|
 | `VITE_APP_TITLE` | 页面标题与应用名，默认 `Hecc Admin` |
 | `VITE_API_BASE_URL` | 接口前缀，默认 `/api` |
-| `VITE_API_TIMEOUT` | 请求超时（毫秒），默认 `15000` |
+| `VITE_API_TIMEOUT` | 请求超时（毫秒），开发默认 `15000`，生产默认 `20000` |
 | `VITE_PROXY_TARGET` | 开发代理目标，默认 `http://127.0.0.1:8080` |
 
-## 布局模板
+## 布局
 
 - `BlankLayout.vue`：无侧边栏/导航栏，承载登录、强制改密、403/404 等独立页面。
 - `DefaultLayout.vue`：业务页面主布局，包含 Sidebar、Navbar、Breadcrumb、NoticeBell、AppMain，内部使用 `<router-view />`。
@@ -102,12 +111,12 @@ npm run dev       # http://localhost:5173
 - 后端恒返回 HTTP 200 + `{code,message,data}`：
   - `10000`：成功，直接返回 `data`；
   - `40003`：会话失效，清理登录态并跳转登录（**无 refresh 流程**）；
-  - `40002`：参数校验失败，展示 `data` 中的校验文案（为空时回退 `message`）；
-  - 其他：展示 `data` 中的业务文案（为空时回退 `message`）。
+  - 其他：优先展示 `data` 中的用户可见文案，为空时回退 `message`。
 - hecc-blot 约定失败时 `data` 承载**用户可见文案**、`message` 是通用短语，
   因此 `utils/request.ts` 统一优先读取 `data` 中的字符串。
 - 强制改密：`mustChangePassword=true` 时守卫只允许进入改密页；改密接口若返回新 token，前端会替换本地 token 并重新拉取用户信息。
-- token 与强制改密标记存放在 localStorage；`40003` 会同时清理 localStorage 与 Pinia 状态。
+- token 与强制改密标记存放在 localStorage；会话失效会同时清理 localStorage 与 Pinia 状态，并对并发请求的重复提示/跳转做去重。
+- 接口封装位于 `src/services/`，组件与 store 不直接调用 axios。
 
 ## 路由与权限
 
@@ -116,7 +125,7 @@ npm run dev       # http://localhost:5173
 - `component` 字符串通过 `import.meta.glob('../views/**/*.vue')` 映射为懒加载组件；目录型菜单无组件时用内嵌 `<router-view />` 承载子路由。
 - 动态路由注册完成后追加 `/:pathMatch(.*)*` 兜底到 404；重新加载菜单时会先移除旧路由。
 - 守卫流程：无 token → 登录页；`mustChangePassword` → 改密页；首次进入业务页拉取 info/menus；路由 meta 权限不足 → 403。
-- 按钮权限：`v-hasPerm="'system:user:add'"`；超级管理员或 `*` 权限直接放行。
+- 按钮权限：`v-hasPerm="'system:user:add'"`，也支持数组（任一命中）与 `system:*` 通配；超级管理员或 `*` 权限直接放行。
 - 前端隐藏不作为安全边界，后端仍按路由权限码校验。
 
 ## 实时通知
@@ -128,9 +137,12 @@ npm run dev       # http://localhost:5173
   - `unread`：未读数变化；
   - `kick`：被踢下线/封禁，立即清理登录态并提示；
   - `shutdown`：服务停机。
-- 模块加载时不会自动连接；`App.vue` 监听 token 变化建立/断开连接，登出或切换账号时中止。
+- SSE 客户端模块加载时不会自动连接；`App.vue` 监听 token 变化建立/断开连接，登出或切换账号时中止。
 - 断线自动重连；未读数与连接状态保存在 `app` store。
 
-## 页面规划（待实现）
+## 代码规范
 
-登录、强制改密、仪表盘、用户、角色、菜单、部门、岗位、字典、系统配置、操作日志、登录日志、文件管理、在线会话、通知发布/我的通知、个人中心（资料/改密/我的设备）。
+- TypeScript 严格模式，`vue-tsc` 类型检查通过后再构建。
+- ESLint 9 flat config（`eslint.config.js`）+ Prettier；提交前建议执行 `npm run lint`、`npm run test`、`npm run build`。
+- 路径别名 `@` 指向 `src`。
+- 不引入 Tailwind，样式以 Element Plus 变量与局部 CSS 为主。
