@@ -33,7 +33,7 @@ server/
 │   ├── config.example.yaml       # 配置模板
 │   └── config.yaml               # 本地配置，gitignore
 ├── scripts/
-│   ├── init.sql                  # 建库 + 建表 + 种子数据
+│   ├── init.sql                  # 建表 + 索引 + 表/字段注释 + 种子数据（纯 SQL）
 │   └── create-topics.sh          # 创建 Kafka 主题 admin.events
 ├── cmd/
 │   └── server/
@@ -44,7 +44,8 @@ server/
 ├── entity/
 │   ├── api/                      # API 请求/响应 DTO
 │   ├── config/                   # 配置结构体、默认值与校验
-│   ├── model/                    # GORM 模型
+│   ├── model/                    # 模型基类：BaseModel / SoftDeleteModel / DataOwner
+│   │   └── sys/                  # sys_* 业务表模型
 │   └── response/health/          # 健康检查响应结构
 ├── enum/                         # 业务码、状态值、Redis 键
 ├── api/
@@ -68,11 +69,23 @@ server/
 
 ### 1. 初始化数据库
 
+首次使用先创建数据库（`hecc-admin` 已存在时跳过）：
+
 ```bash
-psql -h 127.0.0.1 -U postgres -d postgres -f scripts/init.sql
+psql -h 127.0.0.1 -U postgres -d postgres \
+  -c "CREATE DATABASE \"hecc-admin\" WITH ENCODING 'UTF8' TEMPLATE template0;"
 ```
 
-脚本会创建 `hecc-admin` 数据库、全部 `sys_*` 表、索引和默认账号。
+也可以在 GoLand 等客户端手动执行这条 `CREATE DATABASE` 语句。
+
+再连接 `hecc-admin` 执行建表脚本：
+
+```bash
+psql -h 127.0.0.1 -U postgres -d hecc-admin -f scripts/init.sql
+```
+
+`init.sql` 是纯 SQL，也可以在 GoLand / DataGrip 中连接 `hecc-admin` 后直接运行。
+脚本会创建全部 `sys_*` 表、索引、表与字段注释和默认账号。
 如果使用其它数据库名，请同步修改脚本与 `configs/config.yaml`。
 
 ### 2. 准备配置
@@ -142,7 +155,8 @@ bash scripts/create-topics.sh
 ## 数据库
 
 - 表结构以 [`scripts/init.sql`](scripts/init.sql) 为准，不使用 Go 迁移工具。
-- 脚本必须用 psql 执行（内部使用 `\gexec` / `\connect`）。
+- `init.sql` 为纯 SQL，psql / GoLand / DataGrip 均可执行，执行前需先连接 `hecc-admin`。
+- 数据库需手动创建：`CREATE DATABASE "hecc-admin" WITH ENCODING 'UTF8' TEMPLATE template0;`，脚本不建库。
 - 脚本可重复执行：`CREATE TABLE IF NOT EXISTS`、种子数据 `ON CONFLICT DO NOTHING`。
 - 修改表结构时，同步修改 `init.sql` 与 `entity/model` 中的 GORM 模型。
 - 默认账号：`admin / Admin@123456`（`must_change_password = true`）。
